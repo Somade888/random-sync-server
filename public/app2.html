@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#312e81">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Target Selector</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --indigo-950:#312e81;--indigo-700:#4f46e5;--amber-400:#f59e0b;
+  --bg:#1e1b4b;--card:#312e81;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow-y:auto;overflow-x:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:#fff;
+  display:flex;flex-direction:column;align-items:center;
+  padding:calc(var(--safe-t) + 56px) 16px calc(var(--safe-b) + 16px);
+  min-height:100vh;
+}
+
+/* Status bar */
+.status-bar{
+  position:fixed;top:0;left:0;right:0;
+  padding:max(12px,var(--safe-t)) 20px 12px;
+  display:flex;align-items:center;
+  background:rgba(49,46,129,.85);backdrop-filter:blur(10px);
+  z-index:100;
+}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#6b7280;transition:.3s;flex-shrink:0}
+.status-dot.connected{background:#22c55e;box-shadow:0 0 8px #22c55e}
+.status-text{color:#a5b4fc;font-size:clamp(11px,3vw,13px);margin-left:8px}
+
+/* Result card */
+.result-card{
+  width:100%;max-width:440px;
+  background:var(--card);border-radius:clamp(16px,3vmin,22px);
+  padding:clamp(16px,3vmin,22px);
+  margin-bottom:clamp(16px,3vh,26px);
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+.result-label{font-size:clamp(11px,2.5vw,14px);color:#a5b4fc}
+.result-number{font-size:clamp(36px,10vmin,56px);font-weight:800;color:#fff;line-height:1;margin-top:4px}
+.result-number.empty{color:#6366f1;font-size:clamp(22px,5vmin,34px)}
+.lock-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,.2);color:#fbbf24;padding:6px 12px;border-radius:12px;font-size:clamp(11px,2.5vw,13px);font-weight:600;white-space:nowrap}
+.lock-badge svg{width:16px;height:16px;fill:#fbbf24}
+
+/* Grid */
+.grid-title{font-size:clamp(12px,3vw,15px);color:#a5b4fc;margin-bottom:10px;text-align:center}
+.num-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:clamp(6px,2vmin,12px);
+  width:100%;max-width:440px;
+  margin-bottom:clamp(16px,3vh,24px);
+}
+.num-btn{
+  aspect-ratio:1;
+  border:2px solid #4f46e5;background:#3730a3;color:#fff;
+  font-size:clamp(18px,5vmin,28px);font-weight:700;
+  border-radius:clamp(12px,2vmin,18px);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:.15s;
+  -webkit-user-select:none;user-select:none;
+}
+.num-btn:active{transform:scale(.92)}
+.num-btn.selected{background:var(--amber-400);border-color:#fbbf24;color:#1e1b4b;box-shadow:0 0 20px rgba(245,158,11,.5)}
+
+/* Buttons */
+.btn{
+  width:100%;max-width:440px;
+  padding:clamp(12px,2.5vh,18px);
+  border:none;border-radius:clamp(12px,2vmin,16px);
+  font-size:clamp(14px,3.5vw,17px);font-weight:700;
+  cursor:pointer;transition:.15s;
+  -webkit-user-select:none;user-select:none;
+}
+.btn:active{transform:scale(.97)}
+.btn-clear{background:transparent;color:#818cf8;border:2px solid #4f46e5}
+.btn-clear:active{background:rgba(79,70,229,.2)}
+
+/* Landscape */
+@media (orientation:landscape) and (max-height:520px){
+  body{flex-direction:row;align-items:flex-start;justify-content:center;gap:clamp(16px,3vw,32px);padding-top:calc(var(--safe-t) + 56px);flex-wrap:wrap}
+  .result-card{max-width:clamp(160px,30vw,240px);margin-bottom:0}
+  .result-number{font-size:clamp(32px,8vh,48px)}
+  .num-grid{max-width:clamp(300px,50vw,440px);margin-bottom:0}
+  .btn-clear{display:none}
+}
+
+/* Settings */
+.settings-icon{
+  position:fixed;bottom:max(16px,var(--safe-b));right:16px;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(79,70,229,.3);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;z-index:100;
+}
+.settings-icon svg{width:24px;height:24px;fill:#a5b4fc}
+.settings-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+.settings-modal.show{display:flex}
+.settings-card{background:#3730a3;border-radius:24px;padding:28px;width:100%;max-width:340px}
+.settings-card h2{font-size:20px;margin-bottom:16px}
+.settings-card label{display:block;font-size:13px;color:#a5b4fc;margin-bottom:6px}
+.settings-card input{width:100%;padding:12px;border-radius:10px;border:2px solid #4f46e5;background:#1e1b4b;color:#fff;font-size:15px;margin-bottom:12px}
+.settings-card input:focus{outline:none;border-color:#818cf8}
+.test-result{font-size:13px;margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <div class="status-dot" id="wsDot"></div>
+  <span class="status-text" id="wsText">กำลังเชื่อมต่อ...</span>
+</div>
+
+<div class="result-card">
+  <div>
+    <div class="result-label">ผลล่าสุดจากเครื่อง 1</div>
+    <div class="result-number empty" id="resultNum">ยังไม่มี</div>
+  </div>
+  <div id="lockBadge"></div>
+</div>
+
+<div class="grid-title">เลือกเป้าหมาย (แตะซ้ำเพื่อยกเลิก)</div>
+<div class="num-grid" id="numGrid"></div>
+<button class="btn btn-clear" id="btnClear">✕ ล้างการตั้งค่า</button>
+
+<div class="settings-icon" id="settingsIcon">
+  <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+</div>
+
+<div class="settings-modal" id="settingsModal">
+  <div class="settings-card">
+    <h2>⚙️ ตั้งค่า</h2>
+    <label>Server URL</label>
+    <input type="text" id="serverUrl" placeholder="https://...">
+    <button class="btn" id="btnTest" style="background:#4f46e5;color:#fff">ทดสอบการเชื่อมต่อ</button>
+    <div class="test-result" id="testResult"></div>
+    <button class="btn btn-clear" id="btnCloseSettings" style="margin-top:12px">ปิด</button>
+  </div>
+</div>
+
+<script>
+let ws=null;
+let serverState={target:null,lastResult:null,locked:false};
+let baseUrl=localStorage.getItem('serverUrl')||window.location.origin;
+
+const numGrid=document.getElementById('numGrid');
+const resultNum=document.getElementById('resultNum');
+const lockBadge=document.getElementById('lockBadge');
+const btnClear=document.getElementById('btnClear');
+const wsDot=document.getElementById('wsDot');
+const wsText=document.getElementById('wsText');
+const settingsIcon=document.getElementById('settingsIcon');
+const settingsModal=document.getElementById('settingsModal');
+const serverUrlInput=document.getElementById('serverUrl');
+const btnTest=document.getElementById('btnTest');
+const testResult=document.getElementById('testResult');
+const btnCloseSettings=document.getElementById('btnCloseSettings');
+
+for(let i=1;i<=15;i++){
+  const btn=document.createElement('button');
+  btn.className='num-btn';btn.textContent=i;btn.dataset.num=i;
+  btn.addEventListener('click',()=>selectTarget(i));
+  numGrid.appendChild(btn);
+}
+
+function connectWS(){
+  if(!baseUrl){wsText.textContent='ตั้งค่า Server URL ก่อน';return;}
+  const wsUrl=baseUrl.replace(/^http/,'ws').replace(/^https/,'wss');
+  try{ws=new WebSocket(wsUrl);}catch(e){wsText.textContent='URL ไม่ถูกต้อง';return;}
+  ws.onopen=()=>{wsDot.className='status-dot connected';};
+  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update'){serverState=m.data;updateUI();}};
+  ws.onclose=()=>{wsDot.className='status-dot';wsText.textContent='หลุด — กำลังเชื่อมใหม่...';setTimeout(connectWS,3000);};
+  ws.onerror=()=>{wsText.textContent='เชื่อมต่อล้มเหลว';};
+}
+
+function updateUI(){
+  if(serverState.lastResult!==null){
+    resultNum.textContent=serverState.lastResult;
+    resultNum.classList.remove('empty');
+  }else{
+    resultNum.textContent='ยังไม่มี';
+    resultNum.classList.add('empty');
+  }
+  if(serverState.locked){
+    lockBadge.innerHTML='<div class="lock-badge"><svg viewBox="0 0 24 24"><path d="M12 1a5 5 0 00-5 5v3H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2v-9a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm3 8H9V6a3 3 0 016 0v3z"/></svg>ล็อคอยู่</div>';
+  }else{lockBadge.innerHTML='';}
+  document.querySelectorAll('.num-btn').forEach(btn=>{
+    if(parseInt(btn.dataset.num)===serverState.target)btn.classList.add('selected');
+    else btn.classList.remove('selected');
+  });
+}
+
+async function selectTarget(num){
+  const newTarget=(serverState.target===num)?null:num;
+  try{await fetch(baseUrl+'/target',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:newTarget})});}catch(e){}
+}
+
+btnClear.addEventListener('click',async()=>{
+  try{await fetch(baseUrl+'/target',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:null})});}catch(e){}
+});
+
+settingsIcon.addEventListener('click',()=>{settingsModal.classList.add('show');serverUrlInput.value=baseUrl;});
+btnCloseSettings.addEventListener('click',()=>{settingsModal.classList.remove('show');});
+btnTest.addEventListener('click',async()=>{
+  const url=serverUrlInput.value.trim().replace(/\/$/,'');
+  testResult.textContent='กำลังทดสอบ...';testResult.style.color='#a5b4fc';
+  try{
+    const res=await fetch(url+'/state');
+    if(res.ok){testResult.textContent='✅ เชื่อมต่อสำเร็จ!';testResult.style.color='#22c55e';baseUrl=url;localStorage.setItem('serverUrl',url);
+      setTimeout(()=>{settingsModal.classList.remove('show');connectWS();},800);
+    }else{testResult.textContent='❌ HTTP '+res.status;testResult.style.color='#ef4444';}
+  }catch(e){testResult.textContent='❌ '+e.message;testResult.style.color='#ef4444';}
+});
+
+connectWS();
+</script>
+</body>
+</html>
