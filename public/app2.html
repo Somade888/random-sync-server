@@ -149,6 +149,7 @@ body{
 
 <script>
 let ws=null;
+let wsReconnectTimer=null;
 let serverState={target:null,lastResult:null,locked:false};
 let baseUrl=localStorage.getItem('serverUrl')||window.location.origin;
 
@@ -173,13 +174,20 @@ for(let i=1;i<=15;i++){
 }
 
 function connectWS(){
-  if(!baseUrl){wsText.textContent='ตั้งค่า Server URL ก่อน';return;}
+  if(ws&&(ws.readyState===0||ws.readyState===1))return;
+  if(!baseUrl){wsText.textContent='ตั้งค่า Server URL';return;}
   const wsUrl=baseUrl.replace(/^http/,'ws').replace(/^https/,'wss');
-  try{ws=new WebSocket(wsUrl);}catch(e){wsText.textContent='URL ไม่ถูกต้อง';return;}
-  ws.onopen=()=>{wsDot.className='status-dot connected';};
+  try{ws=new WebSocket(wsUrl);}catch(e){wsText.textContent='URL ไม่ถูกต้อง';scheduleReconnect();return;}
+  ws.onopen=()=>{wsDot.className='status-dot connected';wsText.textContent='';};
   ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update'){serverState=m.data;updateUI();}};
-  ws.onclose=()=>{wsDot.className='status-dot';wsText.textContent='หลุด — กำลังเชื่อมใหม่...';setTimeout(connectWS,3000);};
-  ws.onerror=()=>{wsText.textContent='เชื่อมต่อล้มเหลว';};
+  ws.onclose=()=>{ws=null;wsDot.className='status-dot';scheduleReconnect();};
+  ws.onerror=()=>{};
+}
+
+function scheduleReconnect(){
+  if(wsReconnectTimer)return;
+  wsDot.className='status-dot';
+  wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},2000);
 }
 
 function updateUI(){

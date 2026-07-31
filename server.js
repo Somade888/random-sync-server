@@ -36,6 +36,16 @@ function broadcastState() {
   console.log(`[broadcast] ${JSON.stringify(state)}`);
 }
 
+// Heartbeat — ส่ง ping ทุก 30 วินาที กัน idle disconnect (Cloudflare/router)
+const HEARTBEAT_INTERVAL = 30000;
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.readyState === 1) {
+      ws.send(JSON.stringify({ event: 'ping' }));
+    }
+  });
+}, HEARTBEAT_INTERVAL);
+
 wss.on('connection', (ws) => {
   console.log(`[ws] client connected (total: ${wss.clients.size})`);
   // ส่ง state ปัจจุบันทันที
