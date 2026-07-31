@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: poksod-sync
+    runtime: node
+    plan: free
+    repo: https://github.com/Somade888/random-sync-server
+    branch: main
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
