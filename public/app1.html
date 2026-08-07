@@ -164,7 +164,14 @@ async function doRandom(){
   await sleep(1000);
   clearInterval(si);
   numDisplay.classList.remove('spinning');
-  let result=(serverState.target!==null)?serverState.target:Math.floor(Math.random()*15)+1;
+  // ดึง target ล่าสุดจาก server ตอนกดสุ่ม — ไม่พึ่ง WebSocket
+  let target=null;
+  try{
+    const res=await fetch(baseUrl+'/state',{cache:'no-store'});
+    if(res.ok){const s=await res.json();target=s.target;}
+  }catch(e){}
+  if(target===null)target=serverState.target;
+  let result=(target!==null)?target:Math.floor(Math.random()*15)+1;
   numDisplay.textContent=result;
   try{await fetch(baseUrl+'/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:result})});}catch(e){}
   isSpinning=false;
