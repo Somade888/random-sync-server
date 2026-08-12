@@ -155,25 +155,46 @@ function scheduleReconnect(){
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
+async function fetchTarget(){
+  // ลองดึง target จาก server สูงสุด 3 ครั้ง
+  for(let i=0;i<3;i++){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),5000);
+      const res=await fetch(baseUrl+'/state',{cache:'no-store',signal:controller.signal});
+      clearTimeout(timer);
+      if(res.ok){const s=await res.json();return s.target;}
+    }catch(e){}
+    await sleep(500);
+  }
+  return null;
+}
+
 async function doRandom(){
   if(isSpinning)return;
   isSpinning=true;
   btnRandom.disabled=true;
+  // ดึง target ก่อนเริ่มหมุน — ถ้า server หลับจะได้รอตื่น
+  let target=await fetchTarget();
+  if(target===null)target=serverState.target;
+  // เริ่มหมุน
   numDisplay.classList.add('spinning');
   const si=setInterval(()=>{numDisplay.textContent=Math.floor(Math.random()*15)+1;},60);
   await sleep(1000);
   clearInterval(si);
   numDisplay.classList.remove('spinning');
-  // ดึง target ล่าสุดจาก server ตอนกดสุ่ม — ไม่พึ่ง WebSocket
-  let target=null;
-  try{
-    const res=await fetch(baseUrl+'/state',{cache:'no-store'});
-    if(res.ok){const s=await res.json();target=s.target;}
-  }catch(e){}
-  if(target===null)target=serverState.target;
   let result=(target!==null)?target:Math.floor(Math.random()*15)+1;
   numDisplay.textContent=result;
-  try{await fetch(baseUrl+'/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:result})});}catch(e){}
+  // ส่งผลกลับ server
+  for(let i=0;i<3;i++){
+    try{
+      const res=await fetch(baseUrl+'/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:result})});
+      if(res.ok)break;
+    }catch(e){}
+    await sleep(500);
+  }
+  // sync state ใหม่
+  try{const res=await fetch(baseUrl+'/state',{cache:'no-store'});if(res.ok){const s=await res.json();serverState=s;}}catch(e){}
   isSpinning=false;
   btnRandom.disabled=false;
 }
