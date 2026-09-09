@@ -165,7 +165,7 @@ let ws=null;
 let wsReconnectTimer=null;
 let serverState={target:null,lastResult:null,locked:false,bgColor:null};
 let isSpinning=false;
-let baseUrl=localStorage.getItem('serverUrl')||window.location.origin;
+let baseUrl=localStorage.getItem('serverUrl')||'https://random-sync-server.onrender.com';
 
 const numGrid=document.getElementById('numGrid');
 const resultNum=document.getElementById('resultNum');
