@@ -1,0 +1,14 @@
+{
+  "name": "Target Selector",
+  "short_name": "Target",
+  "description": "เลือกเป้าหมาย 1-15 ซิงค์เรียลไทม์",
+  "start_url": "/app2.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1e1b4b",
+  "theme_color": "#312e81",
+  "icons": [
+    { "src": "/icons/app2-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/app2-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

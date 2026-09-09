@@ -1,0 +1,14 @@
+{
+  "name": "Random Machine",
+  "short_name": "Random",
+  "description": "สุ่มเลข 1-15 ซิงค์เรียลไทม์",
+  "start_url": "/app1.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1e1b4b",
+  "theme_color": "#312e81",
+  "icons": [
+    { "src": "/icons/app1-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/app1-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
