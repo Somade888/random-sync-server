@@ -17,7 +17,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 let state = {
   target: null,      // number 1-15 หรือ null
   lastResult: null,  // เลขล่าสุดที่แอป 1 สุ่มออก
-  locked: false      // แอป 1 ล็อคอยู่หรือไม่
+  locked: false,     // แอป 1 ล็อคอยู่หรือไม่
+  bgColor: null      // สีพื้นหลังที่แอป 2 ตั้ง (#rrggbb หรือ null = ค่าเริ่มต้น)
 };
 
 // ═══════════════════════════════════════════
@@ -94,6 +95,18 @@ app.post('/lock', (req, res) => {
   const { locked } = req.body;
   state.locked = !!locked;
   console.log(`[lock] locked = ${state.locked}`);
+  broadcastState();
+  res.json(state);
+});
+
+// POST /color { color: "#rrggbb"|null } → ตั้งสีพื้นหลัง (จากแอป 2)
+app.post('/color', (req, res) => {
+  const { color } = req.body;
+  if (color !== null && (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color))) {
+    return res.status(400).json({ error: 'color must be #rrggbb or null' });
+  }
+  state.bgColor = color;
+  console.log(`[color] bgColor = ${color}`);
   broadcastState();
   res.json(state);
 });

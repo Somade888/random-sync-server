@@ -122,7 +122,7 @@ body{
 <script>
 let ws=null;
 let wsReconnectTimer=null;
-let serverState={target:null,lastResult:null,locked:false};
+let serverState={target:null,lastResult:null,locked:false,bgColor:null};
 let isSpinning=false;
 let baseUrl=localStorage.getItem('serverUrl')||window.location.origin;
 
@@ -142,7 +142,7 @@ function connectWS(){
   const wsUrl=baseUrl.replace(/^http/,'ws').replace(/^https/,'wss');
   try{ws=new WebSocket(wsUrl);}catch(e){scheduleReconnect();return;}
   ws.onopen=()=>{};
-  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update')serverState=m.data;};
+  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update'){serverState=m.data;applyColor();}};
   ws.onclose=()=>{ws=null;scheduleReconnect();};
   ws.onerror=()=>{};
 }
@@ -150,6 +150,10 @@ function connectWS(){
 function scheduleReconnect(){
   if(wsReconnectTimer)return;
   wsReconnectTimer=setTimeout(()=>{wsReconnectTimer=null;connectWS();},2000);
+}
+
+function applyColor(){
+  document.body.style.background=serverState.bgColor||'';
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
@@ -193,7 +197,7 @@ async function doRandom(){
     await sleep(500);
   }
   // sync state ใหม่
-  try{const res=await fetch(baseUrl+'/state',{cache:'no-store'});if(res.ok){const s=await res.json();serverState=s;}}catch(e){}
+  try{const res=await fetch(baseUrl+'/state',{cache:'no-store'});if(res.ok){const s=await res.json();serverState=s;applyColor();}}catch(e){}
   isSpinning=false;
   btnRandom.disabled=false;
 }

@@ -94,6 +94,15 @@ body{
   .btn-clear{display:none}
 }
 
+/* Color toolbar + palette */
+.toolbar{display:flex;gap:10px;width:100%;max-width:440px;margin-bottom:clamp(12px,2vh,18px)}
+.toolbar .btn{flex:1}
+.palette{display:none;flex-wrap:wrap;gap:12px;justify-content:center;width:100%;max-width:440px;margin-bottom:clamp(12px,2vh,18px)}
+.palette.show{display:flex}
+.swatch{width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.25);cursor:pointer;transition:.15s}
+.swatch:active{transform:scale(.9)}
+.swatch.selected{border-color:#fff;box-shadow:0 0 12px rgba(255,255,255,.5)}
+
 /* Settings */
 .settings-icon{
   position:fixed;bottom:max(16px,var(--safe-b));right:16px;
@@ -130,6 +139,11 @@ body{
 
 <div class="grid-title">เลือกเป้าหมาย (แตะซ้ำเพื่อยกเลิก)</div>
 <div class="num-grid" id="numGrid"></div>
+<div class="toolbar">
+  <button class="btn" id="btnRandom" style="background:#f59e0b;color:#1e1b4b">🎰 สุ่ม</button>
+  <button class="btn" id="btnColor" style="background:#4f46e5;color:#fff">🎨 เปลี่ยนสี</button>
+</div>
+<div class="palette" id="palette"></div>
 <button class="btn btn-clear" id="btnClear">✕ ล้างการตั้งค่า</button>
 
 <div class="settings-icon" id="settingsIcon">
@@ -150,13 +164,17 @@ body{
 <script>
 let ws=null;
 let wsReconnectTimer=null;
-let serverState={target:null,lastResult:null,locked:false};
+let serverState={target:null,lastResult:null,locked:false,bgColor:null};
+let isSpinning=false;
 let baseUrl=localStorage.getItem('serverUrl')||window.location.origin;
 
 const numGrid=document.getElementById('numGrid');
 const resultNum=document.getElementById('resultNum');
 const lockBadge=document.getElementById('lockBadge');
 const btnClear=document.getElementById('btnClear');
+const btnRandom=document.getElementById('btnRandom');
+const btnColor=document.getElementById('btnColor');
+const palette=document.getElementById('palette');
 const wsDot=document.getElementById('wsDot');
 const wsText=document.getElementById('wsText');
 const settingsIcon=document.getElementById('settingsIcon');
@@ -179,7 +197,7 @@ function connectWS(){
   const wsUrl=baseUrl.replace(/^http/,'ws').replace(/^https/,'wss');
   try{ws=new WebSocket(wsUrl);}catch(e){wsText.textContent='URL ไม่ถูกต้อง';scheduleReconnect();return;}
   ws.onopen=()=>{wsDot.className='status-dot connected';wsText.textContent='';};
-  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update'){serverState=m.data;updateUI();}};
+  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(m.event==='state_update'){serverState=m.data;updateUI();applyColor();}};
   ws.onclose=()=>{ws=null;wsDot.className='status-dot';scheduleReconnect();};
   ws.onerror=()=>{};
 }
@@ -206,6 +224,76 @@ function updateUI(){
     else btn.classList.remove('selected');
   });
 }
+
+function applyColor(){
+  document.body.style.background=serverState.bgColor||'';
+  document.querySelectorAll('.swatch').forEach(sw=>{
+    sw.classList.toggle('selected',(serverState.bgColor||'')===sw.dataset.color);
+  });
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ═══ PALETTE ═══
+const COLORS=[
+  {c:'',label:'เดิม'},
+  {c:'#7f1d1d',label:'แดงเข้ม'},
+  {c:'#14532d',label:'เขียวเข้ม'},
+  {c:'#134e4a',label:'เขียวน้ำทะเล'},
+  {c:'#1e3a8a',label:'น้ำเงิน'},
+  {c:'#581c87',label:'ม่วง'},
+  {c:'#7c2d12',label:'น้ำตาล'},
+  {c:'#0f172a',label:'ดำ'}
+];
+COLORS.forEach(({c})=>{
+  const sw=document.createElement('div');
+  sw.className='swatch';
+  sw.dataset.color=c;
+  sw.style.background=c||'#1e1b4b';
+  sw.addEventListener('click',async()=>{
+    try{
+      await fetch(baseUrl+'/color',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({color:c||null})});
+      serverState.bgColor=c||null;applyColor();
+    }catch(e){}
+  });
+  palette.appendChild(sw);
+});
+btnColor.addEventListener('click',()=>palette.classList.toggle('show'));
+
+// ═══ RANDOM (สุ่มจากแอป 2) ═══
+async function doRandom2(){
+  if(isSpinning)return;
+  isSpinning=true;
+  resultNum.classList.remove('empty');
+  const si=setInterval(()=>{resultNum.textContent=Math.floor(Math.random()*15)+1;},60);
+  // ดึง target จาก server (ลอง 3 ครั้ง)
+  let target=null;
+  for(let i=0;i<3;i++){
+    try{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),5000);
+      const res=await fetch(baseUrl+'/state',{cache:'no-store',signal:ctrl.signal});
+      clearTimeout(timer);
+      if(res.ok){const s=await res.json();target=s.target;serverState=s;applyColor();break;}
+    }catch(e){}
+    await sleep(500);
+  }
+  if(target===null)target=serverState.target;
+  await sleep(1000);
+  clearInterval(si);
+  const result=(target!==null)?target:Math.floor(Math.random()*15)+1;
+  resultNum.textContent=result;
+  // ส่งผลไป server (ลอง 3 ครั้ง)
+  for(let i=0;i<3;i++){
+    try{
+      const res=await fetch(baseUrl+'/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:result})});
+      if(res.ok)break;
+    }catch(e){}
+    await sleep(500);
+  }
+  isSpinning=false;
+}
+btnRandom.addEventListener('click',doRandom2);
 
 async function selectTarget(num){
   const newTarget=(serverState.target===num)?null:num;
