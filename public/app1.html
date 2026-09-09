@@ -180,13 +180,12 @@ async function doRandom(){
   if(isSpinning)return;
   isSpinning=true;
   btnRandom.disabled=true;
-  // ดึง target ก่อนเริ่มหมุน — ถ้า server หลับจะได้รอตื่น
-  let target=await fetchTarget();
-  if(target===null)target=serverState.target;
-  // เริ่มหมุน
+  // เริ่มหมุนทันที — ดึง target ไปพร้อมกัน (ไม่ต้องรอ)
   numDisplay.classList.add('spinning');
   const si=setInterval(()=>{numDisplay.textContent=Math.floor(Math.random()*15)+1;},60);
-  await sleep(1000);
+  const fetchP=fetchTarget().then(t=>t!==null?t:serverState.target);
+  await sleep(1000);            // หมุนอย่างน้อย 1 วิ
+  let target=await fetchP;      // ถ้า fetch ยังไม่เสร็จ หมุนต่อระหว่างรอ
   clearInterval(si);
   numDisplay.classList.remove('spinning');
   let result=(target!==null)?target:Math.floor(Math.random()*15)+1;
