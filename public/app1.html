@@ -36,16 +36,13 @@ body{
 .status-dot.connected{background:#22c55e;box-shadow:0 0 8px #22c55e}
 .status-text{color:#a5b4fc;font-size:clamp(11px,3vw,13px);margin-left:8px}
 
-/* Main number box */
+/* Main number box — ไม่มีกรอบ โปร่งใส */
 .number-box{
   position:relative;
   width:clamp(180px,55vmin,320px);
   height:clamp(180px,55vmin,320px);
-  border-radius:clamp(20px,5vmin,36px);
-  background:var(--card);
   display:flex;align-items:center;justify-content:center;
   margin-bottom:clamp(20px,5vh,40px);
-  box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.1);
   cursor:pointer;
 }
 .number-display{
@@ -199,8 +196,11 @@ async function doRandom(){
   btnRandom.disabled=false;
 }
 
-btnRandom.addEventListener('click',doRandom);
-numBox.addEventListener('click',doRandom);
+// แตะที่ไหนก็ได้บนหน้าจอ = สุ่ม (ยกเว้นปุ่มตั้งค่า/หน้าต่างตั้งค่า)
+document.addEventListener('click',(e)=>{
+  if(e.target.closest('.settings-icon')||e.target.closest('.settings-modal'))return;
+  doRandom();
+});
 settingsIcon.addEventListener('click',()=>{settingsModal.classList.add('show');serverUrlInput.value=baseUrl;});
 btnCloseSettings.addEventListener('click',()=>{settingsModal.classList.remove('show');});
 btnTest.addEventListener('click',async()=>{
